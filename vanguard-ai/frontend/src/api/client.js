@@ -51,7 +51,11 @@ export const seedDatabase = () =>
 
 // ── Vulnerabilities ──
 export const getVulnerabilities = (filters = {}) =>
-  api.get('/vulnerabilities/', { params: filters }).then((r) => (Array.isArray(r.data) ? r.data : []));
+  api.get('/vulnerabilities/', { params: filters }).then((r) => {
+    // Endpoint returns { total, skip, limit, vulnerabilities: [...] }.
+    const d = r.data;
+    return d && Array.isArray(d.vulnerabilities) ? d : { total: 0, vulnerabilities: [] };
+  });
 
 export const getVulnerability = (vulnId) =>
   api.get(`/vulnerabilities/${vulnId}`).then((r) => r.data);
