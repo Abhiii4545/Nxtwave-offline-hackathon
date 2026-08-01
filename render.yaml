@@ -1,16 +1,16 @@
 services:
   # ── FastAPI backend ──
+  # rootDir is intentionally NOT used — Render was not applying it for this
+  # blueprint, so every command uses explicit repo-root-relative paths.
   - type: web
     name: vanguard-backend
     runtime: python
-    rootDir: vanguard-ai/backend
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r vanguard-ai/backend/requirements.txt
+    startCommand: cd vanguard-ai/backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
-      # Pin Python — Render defaults new services to 3.13, where the pinned
-      # deps (sqlmodel 0.0.14, groq 0.9.0, zap client) have no wheels.
+      # Match local; Render defaults new services to 3.13 where pinned deps fail.
       - key: PYTHON_VERSION
         value: "3.11.9"
       # Allow the deployed frontend to call the API. "*" is fine for a public
@@ -25,9 +25,8 @@ services:
   - type: web
     name: vanguard-frontend
     runtime: static
-    rootDir: vanguard-ai/frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    buildCommand: cd vanguard-ai/frontend && npm install && npm run build
+    staticPublishPath: vanguard-ai/frontend/dist
     envVars:
       # Injected at build time; points the SPA at the backend service above.
       - key: VITE_API_URL
