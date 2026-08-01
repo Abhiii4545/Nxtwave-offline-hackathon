@@ -28,12 +28,10 @@ services:
     buildCommand: cd vanguard-ai/frontend && npm install && npm run build
     staticPublishPath: vanguard-ai/frontend/dist
     envVars:
-      # Injected at build time; points the SPA at the backend service above.
+      # Baked in at build time. fromService `host` returned only the service
+      # name (no .onrender.com), breaking DNS — use the full backend URL.
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: vanguard-backend
-          property: host
+        value: https://vanguard-backend-4ibe.onrender.com
     routes:
       # SPA fallback so client-side routes (/scan, /dashboard/…) resolve.
       - type: rewrite
