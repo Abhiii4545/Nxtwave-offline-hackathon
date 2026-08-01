@@ -6,3 +6,6 @@ __pycache__/
 *.log
 *.txt
 !docker-compose.yml
+# Required deploy files that happen to be .txt — must be tracked
+!vanguard-ai/backend/requirements.txt
+!vanguard-ai/backend/runtime.txt
