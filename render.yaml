@@ -1,0 +1,38 @@
+services:
+  # ── FastAPI backend ──
+  - type: web
+    name: vanguard-backend
+    runtime: python
+    rootDir: vanguard-ai/backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # Allow the deployed frontend to call the API. "*" is fine for a public
+      # demo API with no auth; tighten to the frontend URL if you add auth.
+      - key: CORS_ORIGINS
+        value: "*"
+      # Optional — real Groq LLM responses. Leave unset to use mock AI output.
+      - key: GROQ_API_KEY
+        sync: false
+
+  # ── React / Vite frontend (static) ──
+  - type: web
+    name: vanguard-frontend
+    runtime: static
+    rootDir: vanguard-ai/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Injected at build time; points the SPA at the backend service above.
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: vanguard-backend
+          property: host
+    routes:
+      # SPA fallback so client-side routes (/scan, /dashboard/…) resolve.
+      - type: rewrite
+        source: /*
+        destination: /index.html

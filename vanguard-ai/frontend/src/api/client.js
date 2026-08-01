@@ -5,7 +5,13 @@
 
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// VITE_API_URL may be a full URL (https://api.example.com) or a bare host
+// (Render injects the backend hostname without a protocol) — normalize both.
+let API_BASE = import.meta.env.VITE_API_URL || '';
+if (API_BASE && !/^https?:\/\//i.test(API_BASE)) {
+  API_BASE = `https://${API_BASE}`;
+}
+API_BASE = API_BASE.replace(/\/+$/, '');
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
