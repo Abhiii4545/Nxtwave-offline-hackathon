@@ -25,7 +25,7 @@ export default function ScanPage() {
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    getAllScans().then(setScanHistory).catch(console.error);
+    getAllScans().then((d) => setScanHistory(Array.isArray(d) ? d : [])).catch(console.error);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

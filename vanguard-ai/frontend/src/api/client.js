@@ -35,7 +35,7 @@ export const getScanResults = (scanId) =>
   api.get(`/scans/${scanId}/results`).then((r) => r.data);
 
 export const getAllScans = () =>
-  api.get('/scans/').then((r) => r.data);
+  api.get('/scans/').then((r) => (Array.isArray(r.data) ? r.data : []));
 
 export const getScanDiff = (scanId) =>
   api.get(`/scans/${scanId}/diff`).then((r) => r.data);
@@ -45,7 +45,7 @@ export const seedDatabase = () =>
 
 // ── Vulnerabilities ──
 export const getVulnerabilities = (filters = {}) =>
-  api.get('/vulnerabilities/', { params: filters }).then((r) => r.data);
+  api.get('/vulnerabilities/', { params: filters }).then((r) => (Array.isArray(r.data) ? r.data : []));
 
 export const getVulnerability = (vulnId) =>
   api.get(`/vulnerabilities/${vulnId}`).then((r) => r.data);
