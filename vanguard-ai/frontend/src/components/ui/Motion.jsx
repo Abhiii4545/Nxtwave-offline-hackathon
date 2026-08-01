@@ -11,21 +11,40 @@ import {
 /* Number that eases from 0 → value on mount and whenever the target changes.
    Uses a manual rAF tween for maximum reliability with async data. */
 export function CountUp({ to = 0, suffix = '', decimals = 0, duration = 1.2, className = '' }) {
-  const [val, setVal] = useState(0);
   const target = Number(to) || 0;
+  const [val, setVal] = useState(target);
+  const prevTarget = useRef(target);
+
   useEffect(() => {
+    const from = prevTarget.current;
+    prevTarget.current = target;
+    if (from === target) return;
+
     let raf;
+    let fallback;
     const start = performance.now();
     const dur = Math.max(1, duration * 1000);
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
     const tick = (now) => {
       const t = Math.min(1, (now - start) / dur);
-      setVal(target * easeOutCubic(t));
-      if (t < 1) raf = requestAnimationFrame(tick);
+      setVal(from + (target - from) * easeOutCubic(t));
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        clearTimeout(fallback);
+      }
     };
+
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    fallback = setTimeout(() => setVal(target), dur + 100);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(fallback);
+    };
   }, [target, duration]);
+
   return (
     <span className={`numeric ${className}`}>
       {decimals ? val.toFixed(decimals) : Math.round(val)}{suffix}
