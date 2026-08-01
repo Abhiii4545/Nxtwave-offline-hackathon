@@ -183,6 +183,7 @@ export default function ChatInterface({ scanId }) {
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading}
+            aria-label="Send message"
             className="px-4 py-2 rounded-xl bg-accent-cyan text-vanguard-bg font-medium text-sm hover:bg-accent-cyan/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           >
             <Send className="w-4 h-4" />

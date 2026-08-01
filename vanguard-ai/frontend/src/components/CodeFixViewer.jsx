@@ -37,9 +37,11 @@ export default function CodeFixViewer({ vulnId, existingFixes = {} }) {
   };
 
   const copyToClipboard = async (text, section) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(section);
-    setTimeout(() => setCopied(null), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(section);
+      setTimeout(() => setCopied(null), 2000);
+    } catch { /* clipboard not available */ }
   };
 
   // Parse fix into vulnerable and secure sections

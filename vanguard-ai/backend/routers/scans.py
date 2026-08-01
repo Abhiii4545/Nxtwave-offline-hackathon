@@ -1,11 +1,14 @@
 """Scan management API endpoints."""
 
 import json
+import ipaddress
+from urllib.parse import urlparse
 from datetime import datetime
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 from pydantic import BaseModel
 from typing import Optional
+import socket
 
 from database import get_session
 from models import Scan, Vulnerability
@@ -14,6 +17,26 @@ from services.ai_service import ai_service
 from seed_data import seed_database
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+
+BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"}
+
+
+def _validate_target(url: str) -> str:
+    """Validate and sanitize target URL to prevent SSRF."""
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    if not host:
+        raise HTTPException(status_code=400, detail="Invalid URL: no hostname")
+    if host in BLOCKED_HOSTS or host.endswith(".internal"):
+        raise HTTPException(status_code=400, detail="Scanning internal/private hosts is not allowed")
+    try:
+        for info in socket.getaddrinfo(host, None):
+            addr = ipaddress.ip_address(info[4][0])
+            if addr.is_private or addr.is_loopback or addr.is_link_local:
+                raise HTTPException(status_code=400, detail="Scanning private/internal IP addresses is not allowed")
+    except socket.gaierror:
+        pass
+    return url
 
 
 class StartScanRequest(BaseModel):
@@ -36,6 +59,7 @@ async def start_scan(
     target = request.target_url.strip()
     if not target.startswith("http://") and not target.startswith("https://"):
         target = f"https://{target}"
+    target = _validate_target(target)
 
     scan = Scan(
         target_url=target,

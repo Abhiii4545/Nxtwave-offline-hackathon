@@ -81,7 +81,8 @@ export default function VulnDetail() {
     );
   }
 
-  const borderColor = riskBorderColors[vuln.risk] || '#6B7E99';
+  const risk = vuln.risk || 'Informational';
+  const borderColor = riskBorderColors[risk] || '#6B7E99';
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -104,8 +105,8 @@ export default function VulnDetail() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className={`risk-${vuln.risk.toLowerCase()} px-2.5 py-1 rounded text-xs font-semibold uppercase`}>
-                {vuln.risk}
+              <span className={`risk-${risk.toLowerCase()} px-2.5 py-1 rounded text-xs font-semibold uppercase`}>
+                {risk}
               </span>
               {vuln.cweid && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono text-text-muted bg-white/5 border border-vanguard-border">

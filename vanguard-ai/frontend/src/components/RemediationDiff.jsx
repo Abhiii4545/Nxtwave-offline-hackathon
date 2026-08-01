@@ -42,7 +42,10 @@ export default function RemediationDiff({ scanId }) {
     );
   }
 
-  const { summary, fixed, new: added, persisting } = data;
+  const summary = data.summary || {};
+  const fixed = data.fixed || [];
+  const added = data.new || [];
+  const persisting = data.persisting || [];
   const scoreDelta =
     data.current_score != null && data.previous_score != null
       ? Math.round((data.current_score - data.previous_score) * 10) / 10
@@ -72,9 +75,9 @@ export default function RemediationDiff({ scanId }) {
 
       {/* Tally */}
       <div className="grid grid-cols-3 gap-2 mb-5">
-        <Tally n={summary.fixed} label="Fixed" color="#4ADE80" icon={Check} />
-        <Tally n={summary.new} label="New" color="#F87171" icon={Plus} />
-        <Tally n={summary.persisting} label="Persisting" color="#94A3B8" icon={Minus} />
+        <Tally n={summary.fixed ?? 0} label="Fixed" color="#4ADE80" icon={Check} />
+        <Tally n={summary.new ?? 0} label="New" color="#F87171" icon={Plus} />
+        <Tally n={summary.persisting ?? 0} label="Persisting" color="#94A3B8" icon={Minus} />
       </div>
 
       <div className="space-y-4">

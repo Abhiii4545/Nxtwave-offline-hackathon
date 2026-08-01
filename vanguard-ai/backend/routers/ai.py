@@ -13,6 +13,12 @@ from services.ai_service import ai_service
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
+ALLOWED_ROLES = {"user", "assistant"}
+MAX_MESSAGES = 50
+MAX_CONTENT_LEN = 4000
+ALLOWED_LANGUAGES = {"python", "javascript", "java"}
+
+
 class ChatRequest(BaseModel):
     messages: List[dict]
     scan_id: Optional[int] = None
@@ -60,6 +66,9 @@ async def generate_fix(
     
     Caches results per language.
     """
+    if language not in ALLOWED_LANGUAGES:
+        raise HTTPException(status_code=400, detail=f"Unsupported language. Allowed: {', '.join(ALLOWED_LANGUAGES)}")
+
     vuln = session.get(Vulnerability, vuln_id)
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
@@ -120,6 +129,17 @@ async def chat(
     session: Session = Depends(get_session),
 ):
     """Multi-turn AI security chat with optional scan context."""
+    if len(request.messages) > MAX_MESSAGES:
+        raise HTTPException(status_code=400, detail=f"Too many messages (max {MAX_MESSAGES})")
+    sanitized = []
+    for msg in request.messages:
+        role = msg.get("role", "")
+        content = str(msg.get("content", ""))[:MAX_CONTENT_LEN]
+        if role not in ALLOWED_ROLES:
+            role = "user"
+        sanitized.append({"role": role, "content": content})
+    request.messages = sanitized
+
     scan_context = None
 
     if request.scan_id:

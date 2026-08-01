@@ -16,7 +16,11 @@ const sections = [
 
 export default function AIExplainPanel({ vulnId, existingExplanation }) {
   const [explanation, setExplanation] = useState(
-    existingExplanation ? (typeof existingExplanation === 'string' ? JSON.parse(existingExplanation) : existingExplanation) : null
+    () => {
+      if (!existingExplanation) return null;
+      if (typeof existingExplanation !== 'string') return existingExplanation;
+      try { return JSON.parse(existingExplanation); } catch { return null; }
+    }
   );
   const [loading, setLoading] = useState(false);
   const [expandedSections, setExpandedSections] = useState(new Set(['plain_english']));

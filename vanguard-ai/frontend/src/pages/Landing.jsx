@@ -229,7 +229,7 @@ function InteractiveScan() {
   const [revealed, setRevealed] = useState(0);
   const timers = useRef([]);
 
-  const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
+  const clearTimers = () => { timers.current.forEach((id) => { clearTimeout(id); clearInterval(id); }); timers.current = []; };
   useEffect(() => () => clearTimers(), []);
 
   const runScan = () => {
@@ -255,7 +255,7 @@ function InteractiveScan() {
       setProgress(Math.round(p));
       setStage(Math.min(DEMO_STAGES.length - 1, Math.floor((p / 100) * DEMO_STAGES.length)));
     }, 260);
-    timers.current.push(() => clearInterval(tick));
+    timers.current.push(tick);
   };
 
   const reset = () => { clearTimers(); setPhase('idle'); setProgress(0); setRevealed(0); };

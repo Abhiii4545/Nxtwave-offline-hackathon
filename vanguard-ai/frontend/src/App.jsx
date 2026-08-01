@@ -1,18 +1,15 @@
-/**
- * App — Root application component with React Router.
- */
-
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { Suspense, lazy, Component } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
-import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
-import ScanPage from './pages/ScanPage';
-import VulnList from './pages/VulnList';
-import VulnDetail from './pages/VulnDetail';
-import ChatPage from './pages/ChatPage';
-import ReportsPage from './pages/ReportsPage';
+
+const Landing = lazy(() => import('./pages/Landing'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ScanPage = lazy(() => import('./pages/ScanPage'));
+const VulnList = lazy(() => import('./pages/VulnList'));
+const VulnDetail = lazy(() => import('./pages/VulnDetail'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,23 +20,55 @@ const queryClient = new QueryClient({
   },
 });
 
+function Loader() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="typing-dots"><span /><span /><span /></div>
+    </div>
+  );
+}
+
+class ErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <h2 className="text-[18px] font-display font-medium text-white/90 mb-2">Something went wrong</h2>
+            <p className="text-[13px] text-white/50 mb-6">An unexpected error occurred.</p>
+            <button onClick={() => window.location.reload()} className="btn btn-primary">Reload</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/landing" element={<Landing />} />
-          <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard/:scanId" element={<Dashboard />} />
-            <Route path="/scan" element={<ScanPage />} />
-            <Route path="/vulnerabilities" element={<VulnList />} />
-            <Route path="/vulnerabilities/:id" element={<VulnDetail />} />
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Suspense fallback={<Loader />}>
+            <Routes>
+              <Route path="/landing" element={<Landing />} />
+              <Route element={<Layout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard/:scanId" element={<Dashboard />} />
+                <Route path="/scan" element={<ScanPage />} />
+                <Route path="/vulnerabilities" element={<VulnList />} />
+                <Route path="/vulnerabilities/:id" element={<VulnDetail />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

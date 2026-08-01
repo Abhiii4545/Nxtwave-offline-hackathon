@@ -45,7 +45,10 @@ class AIService:
             max_tokens=max_tokens,
             temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        if not response.choices:
+            raise ValueError("Empty response from AI service")
+        content = response.choices[0].message.content
+        return (content or "").strip()
 
     async def explain_vulnerability(self, vuln: Vulnerability) -> dict:
         """Generate a comprehensive AI explanation of a vulnerability.
