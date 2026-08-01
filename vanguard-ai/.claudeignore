@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build output
+dist/
+build/
+.vite/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+*_logs*.txt
+
+# Docker
+docker_ps.txt
+
+# Environment
+.env
+.env.*
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Lock files (large, not useful for context)
+package-lock.json
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
