@@ -11,6 +11,7 @@ import {
 import { getDashboardStats } from '../api/client';
 import useStore from '../store/useStore';
 import StatCard from '../components/StatCard';
+import { timeAgo, formatDateTime } from '../utils/time';
 import SecurityScoreGauge from '../components/SecurityScoreGauge';
 import RiskDonutChart from '../components/RiskDonutChart';
 import VulnTrendChart from '../components/VulnTrendChart';
@@ -55,14 +56,10 @@ export default function Dashboard() {
   const stats = dashboardStats || {};
   const scan = stats.latest_scan;
 
-  // Time since last scan
+  // Time since last scan (timestamps are UTC — see utils/time)
   const getTimeSince = () => {
     if (!scan?.completed_at) return 'No scans yet';
-    const diff = Date.now() - new Date(scan.completed_at).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    return `${hrs}h ago`;
+    return timeAgo(scan.completed_at);
   };
 
   return (
@@ -94,9 +91,7 @@ export default function Dashboard() {
                 <>
                   <span className="text-white/20">·</span>
                   <span className="text-white/40">
-                    {new Date(scan.started_at).toLocaleString(undefined, {
-                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                    })}
+                    {formatDateTime(scan.started_at)}
                   </span>
                 </>
               )}

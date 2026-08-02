@@ -7,6 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts';
+import { formatDate } from '../utils/time';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload) return null;
@@ -26,7 +27,7 @@ export default function VulnTrendChart({ trendData = [] }) {
   // Format data for display
   const data = [...trendData].reverse().map((d) => ({
     ...d,
-    date: d.date ? new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Scan ${d.scan_id}`,
+    date: d.date ? formatDate(d.date, { month: 'short', day: 'numeric' }) : `Scan ${d.scan_id}`,
   }));
 
   if (data.length === 0) {

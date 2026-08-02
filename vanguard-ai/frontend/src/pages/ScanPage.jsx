@@ -12,6 +12,7 @@ import { startScan, getScanStatus, getAllScans, seedDatabase } from '../api/clie
 import useStore from '../store/useStore';
 import ScanProgress from '../components/ScanProgress';
 import SecuritySuggestions from '../components/SecuritySuggestions';
+import { formatDateTime } from '../utils/time';
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -416,9 +417,7 @@ export default function ScanPage() {
                   </p>
                   <p className="text-[11px] text-white/35 mt-0.5 flex items-center gap-1.5">
                     <Clock className="w-2.5 h-2.5" strokeWidth={1.75} />
-                    {s.started_at ? new Date(s.started_at).toLocaleString(undefined, {
-                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                    }) : '—'}
+                    {formatDateTime(s.started_at)}
                     <span className="text-white/20">·</span>
                     {s.total_vulns} finding{s.total_vulns === 1 ? '' : 's'}
                   </p>
