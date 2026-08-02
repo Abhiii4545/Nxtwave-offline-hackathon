@@ -85,6 +85,22 @@ async def health_check():
     }
 
 
+@app.get("/api/ai/selftest")
+async def ai_selftest():
+    """Run a live minimal Groq call and surface the real error if it fails."""
+    from services.ai_service import ai_service
+    result = {"ai_configured": False, "call_ok": False, "sample": None, "error": None, "model": ai_service.model}
+    try:
+        result["ai_configured"] = ai_service._is_available()
+        if result["ai_configured"]:
+            text = ai_service._chat_completion("You are a test bot.", "Reply with the single word: PONG", max_tokens=5)
+            result["call_ok"] = True
+            result["sample"] = (text or "")[:120]
+    except Exception as e:
+        result["error"] = f"{type(e).__name__}: {str(e)[:400]}"
+    return result
+
+
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(
     scan_id: int | None = None,
