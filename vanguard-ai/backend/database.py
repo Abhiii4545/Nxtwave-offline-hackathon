@@ -5,9 +5,21 @@ from sqlmodel import SQLModel, Session, create_engine
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./vanguard.db")
 
-# SQLite needs connect_args for multi-thread access
-connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args, echo=False)
+# Managed Postgres providers (Render, Heroku, …) hand out a "postgres://" URL,
+# but SQLAlchemy requires the "postgresql://" scheme.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+is_sqlite = DATABASE_URL.startswith("sqlite")
+# SQLite needs check_same_thread; Postgres benefits from pre-ping to survive
+# connections dropped while the instance was idle.
+connect_args = {"check_same_thread": False} if is_sqlite else {}
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    echo=False,
+    pool_pre_ping=not is_sqlite,
+)
 
 
 def create_db_and_tables():
