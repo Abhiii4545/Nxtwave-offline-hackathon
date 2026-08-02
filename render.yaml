@@ -1,3 +1,10 @@
+# Persistent Postgres so scans survive free-tier restarts. Render provisions
+# it and injects the connection string into the backend automatically — the
+# credentials are never handled manually.
+databases:
+  - name: vanguard-db
+    plan: free
+
 services:
   # ── FastAPI backend ──
   # rootDir is intentionally NOT used — Render was not applying it for this
@@ -10,6 +17,11 @@ services:
     startCommand: cd vanguard-ai/backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
+      # Auto-wired persistent database connection string (from the database above).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vanguard-db
+          property: connectionString
       # Match local; Render defaults new services to 3.13 where pinned deps fail.
       - key: PYTHON_VERSION
         value: "3.11.9"
