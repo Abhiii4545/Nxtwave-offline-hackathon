@@ -5,6 +5,7 @@ and provides a comprehensive security dashboard API.
 """
 
 import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
 from dotenv import load_dotenv
@@ -12,7 +13,10 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
-load_dotenv()
+# Load .env — check current dir first, then parent (the .env lives in vanguard-ai/, not vanguard-ai/backend/)
+_backend_dir = Path(__file__).resolve().parent
+load_dotenv(_backend_dir / ".env")          # backend/.env  (if it exists)
+load_dotenv(_backend_dir.parent / ".env")   # vanguard-ai/.env
 
 from database import create_db_and_tables, get_session
 from models import Scan, Vulnerability

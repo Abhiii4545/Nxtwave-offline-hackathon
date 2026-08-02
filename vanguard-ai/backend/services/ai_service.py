@@ -58,7 +58,9 @@ class AIService:
         business_impact, severity_justification
         """
         if not self._is_available():
-            return self._mock_explanation(vuln)
+            self._client = None
+            if not self._is_available():
+                return self._mock_explanation(vuln)
 
         prompt = f"""Analyze this web application vulnerability and provide a detailed explanation.
 
@@ -100,7 +102,9 @@ Return ONLY valid JSON, no markdown formatting."""
         Returns formatted code string with vulnerable and secure versions.
         """
         if not self._is_available():
-            return self._mock_code_fix(vuln, language)
+            self._client = None
+            if not self._is_available():
+                return self._mock_code_fix(vuln, language)
 
         prompt = f"""Generate a code fix for this vulnerability in {language}.
 
@@ -136,7 +140,9 @@ Use {language} syntax. Make the code realistic and practical, not just pseudocod
         Returns dict with chain steps, overall risk, and summary.
         """
         if not self._is_available():
-            return self._mock_attack_path(vulnerabilities)
+            self._client = None
+            if not self._is_available():
+                return self._mock_attack_path(vulnerabilities)
 
         vuln_list = "\n".join([
             f"- {v.name} ({v.risk}): {v.description[:100] if v.description else 'N/A'}"
@@ -184,7 +190,11 @@ Rules:
     async def chat(self, messages: List[dict], scan_context: Optional[dict] = None) -> str:
         """Multi-turn security Q&A chat with optional scan context."""
         if not self._is_available():
-            return self._mock_chat_response(messages[-1]["content"] if messages else "")
+            # Try reinitializing the client in case the env var was loaded late
+            self._client = None
+            if not self._is_available():
+                return ("I'm unable to connect to the AI service right now. "
+                        "Please check that the GROQ_API_KEY environment variable is set correctly.")
 
         system = SYSTEM_PROMPT
         if scan_context:
@@ -210,12 +220,28 @@ Use this context to provide specific, actionable security guidance."""
         except Exception as e:
             print(f"AI chat error: {e}")
             self._last_chat_error = f"{type(e).__name__}: {str(e)[:400]}"
-            return self._mock_chat_response(messages[-1]["content"] if messages else "")
+            # Retry once with a fresh client (handles key rotation / transient errors)
+            try:
+                self._client = None
+                if self._is_available():
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[{"role": "system", "content": system}] + messages,
+                        max_tokens=2000,
+                        temperature=0.4,
+                    )
+                    return response.choices[0].message.content.strip()
+            except Exception:
+                pass
+            return (f"I encountered an error processing your request. "
+                    f"Error: {type(e).__name__}. Please try again in a moment.")
 
     async def generate_executive_summary(self, scan: Scan, top_vulns: List[Vulnerability]) -> str:
         """Generate an executive summary for the PDF report."""
         if not self._is_available():
-            return self._mock_executive_summary(scan)
+            self._client = None
+            if not self._is_available():
+                return self._mock_executive_summary(scan)
 
         vuln_list = "\n".join([f"- {v.name} ({v.risk})" for v in top_vulns[:10]])
 
@@ -244,7 +270,9 @@ Do not use markdown formatting."""
         Returns dict with: suggestions (list of actionable items), summary, overall_priority
         """
         if not self._is_available():
-            return self._mock_security_suggestions(scan, vulnerabilities)
+            self._client = None
+            if not self._is_available():
+                return self._mock_security_suggestions(scan, vulnerabilities)
 
         vuln_summary = "\n".join([
             f"- {v.name} ({v.risk}): {v.url} | CWE-{v.cweid or 'N/A'} | {(v.description or 'No description')[:120]}"
