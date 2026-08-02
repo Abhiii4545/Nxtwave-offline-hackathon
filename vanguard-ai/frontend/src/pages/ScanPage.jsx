@@ -22,6 +22,7 @@ export default function ScanPage() {
   const [error, setError] = useState(null);
   const [targetUrl, setTargetUrl] = useState('');
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [waking, setWaking] = useState(false);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -69,31 +70,39 @@ export default function ScanPage() {
       return;
     }
     setError(null);
+    setWaking(false);
+    // The free-tier backend spins down when idle; if the first request is slow,
+    // it's waking up — surface that instead of a silently frozen progress bar.
+    const wakeTimer = setTimeout(() => setWaking(true), 4000);
     try {
       setDisplayProgress(0);
       updateScanProgress(0, 'running');
       const data = await startScan(url);
+      clearTimeout(wakeTimer);
       setScanId(data.scan_id);
       setCurrentScan(data);
 
       intervalRef.current = setInterval(async () => {
         try {
           const status = await getScanStatus(data.scan_id);
+          setWaking(false);
           updateScanProgress(status.progress, status.status);
           if (status.status === 'completed') {
             clearInterval(intervalRef.current);
             setScanResult(status);
-            getAllScans().then(setScanHistory);
+            getAllScans().then((d) => setScanHistory(Array.isArray(d) ? d : []));
           } else if (status.status === 'failed') {
             clearInterval(intervalRef.current);
             setError('Scan failed. Verify the target URL and retry.');
           }
         } catch {
-          /* ignore transient polling errors */
+          // Backend likely cold-starting — keep polling, but tell the user why.
+          setWaking(true);
         }
       }, 1200);
     } catch {
-      setError('Could not start scan. Is the backend reachable?');
+      clearTimeout(wakeTimer);
+      setError('Could not reach the scanner. The free-tier backend may be waking from sleep — wait a moment and try again.');
       resetScan();
     }
   };
@@ -218,6 +227,17 @@ export default function ScanPage() {
 
           <div className="glass p-6 mb-6 text-left">
             <ScanProgress progress={pct} status={scanStatus} />
+
+            {/* Cold-start notice — the free-tier backend can take ~50s to wake */}
+            {waking && (
+              <div className="mt-4 flex items-start gap-2 text-[12px] text-[#7BB8FF]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0 mt-px" />
+                <span>
+                  Waking the scanner — the free-tier backend sleeps when idle and can take
+                  up to a minute on the first request. Hang tight, this won't happen again while it's warm.
+                </span>
+              </div>
+            )}
 
             {/* Stage checklist that lights up as the scan advances */}
             <div className="mt-6 pt-5 hairline-t space-y-2.5">
