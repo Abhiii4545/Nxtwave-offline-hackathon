@@ -228,6 +228,28 @@ class HttpScanner:
             if progress_callback:
                 await progress_callback(15)
 
+            # If the target URL itself returns an error status (404/5xx), it is not
+            # a real page — scanning an error/404 response and presenting it as the
+            # site's security posture is misleading. Report it and stop.
+            if main_response.status_code >= 400:
+                findings.append(Finding(
+                    name=f"Target URL Not Reachable (HTTP {main_response.status_code})",
+                    risk="High",
+                    confidence="High",
+                    url=target_url,
+                    evidence=f"GET {target_url} → HTTP {main_response.status_code} ({len(main_response.content)} bytes).",
+                    description=(
+                        f"The target returned HTTP {main_response.status_code}, so this URL is not a live "
+                        "page. No meaningful assessment can be made from an error response. For SPAs, note "
+                        "that a non-existent path may still return 200 (client-side routing) — verify you are "
+                        "scanning a real, reachable URL."
+                    ),
+                    solution="Scan a URL that returns a successful (2xx) response — usually the site's real entry point.",
+                    cweid="",
+                    repro_command=f"curl -s -o /dev/null -w '%{{http_code}}' {target_url}",
+                ))
+                return findings
+
             findings.extend(self._check_security_headers(main_response, target_url))
 
             if progress_callback:

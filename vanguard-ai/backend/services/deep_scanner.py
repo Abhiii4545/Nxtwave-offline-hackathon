@@ -317,29 +317,38 @@ async def _test_auth(client, api_base: str, endpoints: List[Tuple[str, str]],
                     ))
 
     # ── 2. Missing authentication on data endpoints ──
+    # Only endpoints whose path implies private/user-scoped data are candidates —
+    # many endpoints (public content, catalogs, config, health) are intentionally
+    # unauthenticated, so flagging every public 200 would be a false positive.
+    sensitive = ("user", "account", "profile", "/me", "admin", "order", "payment",
+                 "invoice", "billing", "private", "dashboard", "setting", "credential",
+                 "token", "secret", "patient", "medical", "record", "ssn", "customer")
     tested = 0
     for p in static_gets:
         if tested >= MAX_ENDPOINTS_TESTED:
             break
+        if not any(h in p.lower() for h in sensitive):
+            continue
         tested += 1
         try:
             r = await client.get(full(p))
         except Exception:
             continue
-        # 200 with a body and no auth = broken/missing authentication.
+        # 200 with a body and no auth on a sensitive path = missing authentication.
         if r.status_code == 200 and len(r.content) > 2:
             ctype = r.headers.get("content-type", "").lower()
             if "json" in ctype or (r.text.strip().startswith(("{", "["))):
                 findings.append(Finding(
-                    name="Missing Authentication on API Endpoint",
+                    name="Missing Authentication on Sensitive Endpoint",
                     risk="High",
-                    confidence="High",
+                    confidence="Medium",
                     url=full(p),
                     method="GET",
-                    evidence=f"GET {p} returned HTTP 200 with data and NO authentication token.",
+                    evidence=f"GET {p} returned HTTP 200 with data and NO authentication token (path implies private data).",
                     description=(
-                        "The endpoint returns application data without requiring authentication. "
-                        "Anyone can read it directly, bypassing the login entirely."
+                        "This endpoint's path implies user-scoped or privileged data, yet it returned "
+                        "data without any authentication token. Verify the response does not expose "
+                        "private data to anonymous callers."
                     ),
                     solution="Require and verify an authentication token on every non-public endpoint; default to deny.",
                     cweid="306",
