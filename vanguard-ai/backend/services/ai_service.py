@@ -20,7 +20,7 @@ class AIService:
 
     def __init__(self):
         self._client = None
-        self.model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        self.model = "llama-3.3-70b-versatile"
         self._last_chat_error = None
 
     @property
