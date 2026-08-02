@@ -77,6 +77,11 @@ async def health_check():
         ai_configured = ai_service._is_available()
     except Exception:
         ai_configured = False
+    try:
+        from database import engine
+        db_dialect = engine.dialect.name  # "postgresql" (persistent) or "sqlite" (ephemeral)
+    except Exception:
+        db_dialect = "unknown"
     return {
         "status": "healthy",
         "service": "Vanguard AI",
@@ -86,6 +91,8 @@ async def health_check():
         "groq_key_present": bool(key),
         "groq_key_prefix_ok": key.startswith("gsk_"),
         "ai_configured": ai_configured,
+        "database": db_dialect,
+        "persistent_storage": db_dialect not in ("sqlite", "unknown"),
     }
 
 
