@@ -66,12 +66,22 @@ app.include_router(reports.router)
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint, including AI (Groq) configuration diagnostics."""
+    key = os.getenv("GROQ_API_KEY", "")
+    try:
+        from services.ai_service import ai_service
+        ai_configured = ai_service._is_available()
+    except Exception:
+        ai_configured = False
     return {
         "status": "healthy",
         "service": "Vanguard AI",
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
+        # Diagnostics — never expose the key itself, only whether it's present/valid.
+        "groq_key_present": bool(key),
+        "groq_key_prefix_ok": key.startswith("gsk_"),
+        "ai_configured": ai_configured,
     }
 
 
