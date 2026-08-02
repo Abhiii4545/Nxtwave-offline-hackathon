@@ -36,7 +36,7 @@ export default function ChatPage() {
             </h1>
             <p className="text-[11px] text-white/45 flex items-center gap-1.5 mt-0.5">
               <Cpu className="w-3 h-3" strokeWidth={1.75} />
-              Llama 3.3 70B · online
+              Llama 4 Scout · online
             </p>
           </div>
         </div>
