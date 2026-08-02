@@ -2,7 +2,8 @@
 
 import os
 import json
-from groq import Groq
+import time
+from groq import Groq, RateLimitError
 from typing import List, Optional
 from models import Vulnerability, Scan
 
@@ -35,17 +36,34 @@ class AIService:
         """Check if Groq API is configured."""
         return self.client is not None
 
+    def _call_with_retry(self, call_fn, max_retries: int = 3):
+        """Execute a Groq API call with automatic retry on rate limits."""
+        for attempt in range(max_retries):
+            try:
+                return call_fn()
+            except RateLimitError as e:
+                # Parse retry-after header if available, otherwise use exponential backoff
+                wait = getattr(e, 'retry_after', None)
+                if wait is None:
+                    wait = 2 ** attempt + 1  # 1s, 3s, 5s
+                print(f"Rate limited (attempt {attempt + 1}/{max_retries}), waiting {wait}s...")
+                time.sleep(min(wait, 10))  # cap at 10s
+        # Final attempt without catching
+        return call_fn()
+
     def _chat_completion(self, system: str, user_prompt: str, max_tokens: int = 1500) -> str:
-        """Make a chat completion request to Groq."""
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=max_tokens,
-            temperature=0.3,
-        )
+        """Make a chat completion request to Groq with rate-limit retry."""
+        def _call():
+            return self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+        response = self._call_with_retry(_call)
         if not response.choices:
             raise ValueError("Empty response from AI service")
         content = response.choices[0].message.content
@@ -209,30 +227,22 @@ Current Scan Context:
 
 Use this context to provide specific, actionable security guidance."""
 
+        # Limit conversation history to last 10 messages to stay within token limits
+        recent_messages = messages[-10:] if len(messages) > 10 else messages
+
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "system", "content": system}] + messages,
-                max_tokens=2000,
-                temperature=0.4,
-            )
+            def _call():
+                return self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "system", "content": system}] + recent_messages,
+                    max_tokens=1500,
+                    temperature=0.4,
+                )
+            response = self._call_with_retry(_call)
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"AI chat error: {e}")
             self._last_chat_error = f"{type(e).__name__}: {str(e)[:400]}"
-            # Retry once with a fresh client (handles key rotation / transient errors)
-            try:
-                self._client = None
-                if self._is_available():
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=[{"role": "system", "content": system}] + messages,
-                        max_tokens=2000,
-                        temperature=0.4,
-                    )
-                    return response.choices[0].message.content.strip()
-            except Exception:
-                pass
             return (f"I encountered an error processing your request. "
                     f"Error: {type(e).__name__}. Please try again in a moment.")
 
