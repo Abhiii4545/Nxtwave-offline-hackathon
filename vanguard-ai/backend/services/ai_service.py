@@ -21,6 +21,7 @@ class AIService:
     def __init__(self):
         self._client = None
         self.model = "llama-3.3-70b-versatile"
+        self._last_chat_error = None
 
     @property
     def client(self):
@@ -208,6 +209,7 @@ Use this context to provide specific, actionable security guidance."""
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"AI chat error: {e}")
+            self._last_chat_error = f"{type(e).__name__}: {str(e)[:400]}"
             return self._mock_chat_response(messages[-1]["content"] if messages else "")
 
     async def generate_executive_summary(self, scan: Scan, top_vulns: List[Vulnerability]) -> str:
