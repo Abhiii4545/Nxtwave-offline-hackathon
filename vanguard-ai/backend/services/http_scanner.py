@@ -276,9 +276,18 @@ class HttpScanner:
             findings.extend(path_findings)
 
             if progress_callback:
-                await progress_callback(90)
+                await progress_callback(80)
 
             findings.extend(self._check_cache_headers(main_response, target_url))
+
+            # Deep scan: JS asset analysis + active authentication / access-control
+            # testing. Isolated so any failure never breaks the header-level scan.
+            try:
+                from services.deep_scanner import run_deep_scan
+                deep_findings = await run_deep_scan(client, target_url, main_response)
+                findings.extend(deep_findings)
+            except Exception as e:
+                print(f"[!] Deep scan unavailable (non-fatal): {e}")
 
             if progress_callback:
                 await progress_callback(95)
