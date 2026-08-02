@@ -180,6 +180,14 @@ class ZapService:
                 if f.risk in counts:
                     counts[f.risk] += 1
 
+            # A target that was not reachable (404/error/DNS) is not a real
+            # assessment surface — it must not receive a normal, high-looking
+            # security score, and AI suggestions would only hallucinate issues.
+            unreachable = any(
+                f.name.startswith("Target URL Not Reachable") or f.name == "Target Unreachable"
+                for f in findings
+            )
+
             scan = session.get(Scan, scan_id)
             scan.status = "completed"
             scan.progress = 100
@@ -190,25 +198,39 @@ class ZapService:
             scan.medium_count = counts["Medium"]
             scan.low_count = counts["Low"]
             scan.info_count = counts["Informational"]
-            scan.security_score = calculate_security_score(counts)
+            scan.security_score = 0 if unreachable else calculate_security_score(counts)
             session.add(scan)
             session.commit()
 
             print(f"[+] HTTP scan complete for {target_url}: {len(findings)} real findings")
 
-            # Generate AI suggestions from real data
-            try:
-                from services.ai_service import ai_service
-                all_vulns = session.exec(
-                    select(Vulnerability).where(Vulnerability.scan_id == scan_id)
-                ).all()
-                suggestions = await ai_service.generate_security_suggestions(scan, list(all_vulns))
-                scan.ai_suggestions = json.dumps(suggestions)
+            if unreachable:
+                # No live page → give an honest message instead of AI-invented findings.
+                scan.ai_suggestions = json.dumps({
+                    "summary": (
+                        "The target URL could not be reached — it returned an error status or does not "
+                        "exist, so no security assessment could be performed. Confirm the URL is correct "
+                        "and points to a live, publicly reachable page, then scan again."
+                    ),
+                    "overall_risk": "UNKNOWN",
+                    "suggestions": [],
+                })
                 session.add(scan)
                 session.commit()
-                print(f"[+] AI suggestions generated for scan {scan_id}")
-            except Exception as ai_err:
-                print(f"[!] AI suggestions failed: {ai_err}")
+            else:
+                # Generate AI suggestions from real data
+                try:
+                    from services.ai_service import ai_service
+                    all_vulns = session.exec(
+                        select(Vulnerability).where(Vulnerability.scan_id == scan_id)
+                    ).all()
+                    suggestions = await ai_service.generate_security_suggestions(scan, list(all_vulns))
+                    scan.ai_suggestions = json.dumps(suggestions)
+                    session.add(scan)
+                    session.commit()
+                    print(f"[+] AI suggestions generated for scan {scan_id}")
+                except Exception as ai_err:
+                    print(f"[!] AI suggestions failed: {ai_err}")
 
         except Exception as scan_err:
             print(f"[!] HTTP scan also failed ({scan_err}). Falling back to seed data for {target_url}...")
