@@ -11,6 +11,7 @@ export default defineConfig({
           'vendor-charts': ['recharts'],
           'vendor-motion': ['framer-motion'],
           'vendor-utils': ['axios', 'zustand', '@tanstack/react-query'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth'],
         },
       },
     },

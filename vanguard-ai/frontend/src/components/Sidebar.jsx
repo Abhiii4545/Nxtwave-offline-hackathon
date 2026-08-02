@@ -5,10 +5,11 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
-  LayoutDashboard, ScanLine, ShieldAlert, MessageSquare, FileText,
+  LayoutDashboard, ScanLine, ShieldAlert, MessageSquare, FileText, LogOut,
 } from 'lucide-react';
 import { healthCheck } from '../api/client';
 import useStore from '../store/useStore';
+import { useAuth } from '../auth/AuthContext';
 
 const navLinks = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,6 +23,7 @@ export default function Sidebar() {
   const [apiConnected, setApiConnected] = useState(false);
   const scanStatus = useStore((s) => s.scanStatus);
   const dashboardStats = useStore((s) => s.dashboardStats);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const checkApi = async () => {
@@ -156,6 +158,25 @@ export default function Sidebar() {
             </span>
           </StatusRow>
         </div>
+
+        {/* Signed-in user + logout */}
+        {user && (
+          <div className="mt-2 flex items-center gap-2.5 px-1">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-gradient-to-br from-[#7BB8FF]/30 to-[#C4B5FD]/30 border border-white/10 text-[11px] font-medium text-white/85 shrink-0">
+              {(user.email || '?').charAt(0).toUpperCase()}
+            </div>
+            <span className="flex-1 min-w-0 text-[11.5px] text-white/60 truncate" title={user.email || ''}>
+              {user.email}
+            </span>
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="p-1.5 rounded-md text-white/40 hover:text-[#F87171] hover:bg-white/[0.04] transition-colors focus-ring"
+            >
+              <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

@@ -2,8 +2,11 @@ import React, { Suspense, lazy, Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
+import { AuthProvider } from './auth/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
 
 const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
 const VulnList = lazy(() => import('./pages/VulnList'));
@@ -51,23 +54,35 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Suspense fallback={<Loader />}>
-            <Routes>
-              <Route path="/landing" element={<Landing />} />
-              <Route element={<Layout />}>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard/:scanId" element={<Dashboard />} />
-                <Route path="/scan" element={<ScanPage />} />
-                <Route path="/vulnerabilities" element={<VulnList />} />
-                <Route path="/vulnerabilities/:id" element={<VulnDetail />} />
-                <Route path="/chat" element={<ChatPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Suspense fallback={<Loader />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+
+                {/* Authenticated app */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard/:scanId" element={<Dashboard />} />
+                  <Route path="/scan" element={<ScanPage />} />
+                  <Route path="/vulnerabilities" element={<VulnList />} />
+                  <Route path="/vulnerabilities/:id" element={<VulnDetail />} />
+                  <Route path="/chat" element={<ChatPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
